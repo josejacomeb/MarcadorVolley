@@ -1,0 +1,10 @@
+#Archivos Intermedios de Compilación y Proteus
+*.err
+*.esym
+*.lst
+*.workspace
+*.PJT
+*.sta
+*.sym
+*.tre
+
