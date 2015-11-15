@@ -4,6 +4,7 @@
 #use delay (clock = 4M)
 #use fast_io(A)
 #use fast_io(B)
+//Alias para Pines de Desplazamiento
 #define RD1 PIN_B0
 #define RD2 PIN_B1
 #define RD3 PIN_B2
@@ -11,11 +12,22 @@
 #define CLK PIN_B4
 #define RST PIN_B5
 #define EN PIN_A0
+//Alias para entradas Digitales
+#define Izq PIN_A1
+#define Der PIN_A2
+#define Reset PIN_A3
+#define Subir PIN_A4
+//Alias para LEDs de Cambio
+#define LEDI PIN_B6
+#define LEDD PIN_B7
+
 void mostrar();
 void inicializar();
 void desplazamiento(int dato, int posicion);
+void sumar(int lado);   //Suma del Lado Izquierdo(0) o Derecho (1)
+void restar(int lado);   //Resta del Lado Izquierdo(0) o Derecho (1)
 //Donde se almacena el score
-int8 marcador[4]={9,6,7,8};
+Signed int8 marcador[4]={0,0,0,0};
 //Código para Formar los Numeros
 int1 cero[7] = {1,0,0,0,0,0,0};
 int1 uno[7] = {1,1,1,1,0,0,1};
@@ -30,30 +42,73 @@ int1 nueve[7] = {0,0,1,0,0,0};
 //Variables Auxiliares
 Signed int8 i = 0;
 int8 j = 0;
+//Tope de Puntos
+int8 tope1 = 12;
+int8 tope2 = 15;
+//Muestra el Set Ganado por el equipo
+int8 setD = 0;
+int8 setI = 0;
+//Cambios
+short CambioI = 0;
+short CambioD = 0;
 void main(){
    set_tris_a(0b00111110);      //Entrada por el Puerto A(A0,A1,A2,A3,A5) 00111111
    set_tris_b(0x00);
    output_a(0x3F);
    output_b(0xFF);
    output_low(EN);
+   output_low(LEDI);
+   output_low(LEDD);
    inicializar();
    output_high(EN);
-   delay_ms(1500);
    mostrar();
-   delay_ms(5000);
-
+   delay_ms(1500);
+   while(TRUE){
+      if(input(Izq)==0){
+         delay_ms(500);
+         if(input(Izq)==1){
+            sumar(0);
+         }
+         else{
+            restar(0);
+            delay_ms(500);    //Por si acaso se mantiene aplastado
+         }
+      }
+      if(input(Der)==0){
+         delay_ms(500);
+         if(input(Der)==1){
+            sumar(1);
+         }
+         else{
+            restar(1);
+            delay_ms(500);    //Por si acaso se mantiene aplastado
+         }
+      }
+   }
 }
 void mostrar(){
    output_low(EN);   //Deshabilita el Muestreo del Display
    for(i = 7;i>=0;i--){
       output_low(CLK);   //Envia la Señal de Reloj a 0 aceptar el Desplazamiento
-      delay_ms(150);
+      delay_ms(50);
       for(j = 0;j<=3;j++){
-         if(i==7){         //Añadir Código de Set Después
-            output_low(RD1);
-            output_low(RD2);
-            output_low(RD3);
-            output_low(RD4);
+         if(i==7){
+            if(setI == 0){
+               output_low(RD1);
+               output_low(RD2);
+            }
+            if(setI == 1)
+               output_high(RD1);
+            if(setI == 2)
+               output_high(RD2);
+            if(setD == 0){
+               output_low(RD3);
+               output_low(RD4);
+            }
+            if(setD == 1)
+               output_high(RD3);
+            if(setD == 2)
+               output_high(RD4);
          }
          else{
             if(marcador[j] == 0){
@@ -90,7 +145,7 @@ void mostrar(){
          }
       }
       output_high(CLK);   //Realiza el Desplazamiento al Ponerse en 1
-      delay_ms(150);
+      delay_ms(50);
       output_high(EN);      //Habilita la Visualización del Display
    }
 }
@@ -98,7 +153,7 @@ void inicializar(){
    int i = 0;
    for(i=0;i<8;i++){
       output_low(CLK);
-      delay_ms(150);
+      delay_ms(50);
       if(i==0){
          output_low(RD1);
          output_low(RD2);
@@ -112,9 +167,10 @@ void inicializar(){
          output_high(RD4);
       }
       output_high(CLK);
-      delay_ms(150);
+      delay_ms(50);
    }
 }
+//Funcion que hace funcionar al Registro de Desplazamiento 74164
 void desplazamiento(int dato, int posicion){
    if(posicion == 0){
        if(dato== 0)
@@ -141,3 +197,92 @@ void desplazamiento(int dato, int posicion){
           output_high(RD4);
    }
 }
+void sumar(int lado){
+   if(lado==0){
+      if(CambioI == 1){
+         if(marcador[1]<10){;
+           marcador[1] += 1;
+         }
+         else{
+            marcador[1] = 0;
+            marcador[0] += 1;
+         }
+         mostrar();
+      }
+      else{
+         CambioD = 0;
+         output_low(LEDD);
+         CambioI = 1;
+         output_high(LEDI);
+      }
+   }
+   else{
+      if(CambioD == 1){
+         if(marcador[3]<10){
+            marcador[3] += 1;
+         }
+         else{
+            marcador[3] = 0;
+            marcador[2] += 1;
+         }
+         mostrar();
+      }
+      else{
+         CambioI = 0;
+         output_low(LEDI);
+         CambioD = 1;
+         output_high(LEDD);
+      }
+   }
+   //Validar  con el Tope
+   if(setI + setD <2){
+      if(10*marcador[0]+marcador[1] == tope1 || 10*marcador[2]+marcador[3] == tope1){
+         if(lado == 0)
+            setI += 1;
+         else
+            setD += 1;
+         marcador[0] = 0;
+         marcador[1] = 0;
+         marcador[2] = 0;
+         marcador[3] = 0;
+         mostrar();
+      }
+   }
+   else{
+      if(10*marcador[0]+marcador[1] == tope2 || 10*marcador[2]+marcador[3] == tope2 ){
+         if(lado == 0)
+            setI += 1;
+         else
+            setD += 1;
+         marcador[0] = 0;
+         marcador[1] = 0;
+         marcador[2] = 0;
+         marcador[3] = 0;
+         mostrar();
+      }
+   }
+}
+void restar(int lado){
+   if(lado==0){
+      if(marcador[1]>=0){
+         marcador[1] -= 1;
+      }
+      else{
+         marcador[1] = 0;
+         marcador[0] -= 1;
+      }
+   }
+   else{
+      if(marcador[3]>=0){
+         marcador[3] -= 1;
+      }
+      else{
+         marcador[3] = 0;
+         marcador[2] -= 1;
+      }
+   }
+   mostrar();
+}
+
+
+
