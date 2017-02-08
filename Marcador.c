@@ -45,13 +45,16 @@ Signed int8 i = 0;
 int8 j = 0;
 //Tope de Puntos
 int8 tope1 = 12;
-int8 tope2 = 15;
+int8 tope2 = 12;
+int8 tope3 = 15;
 //Muestra el Set Ganado por el equipo
 int8 setD = 0;
 int8 setI = 0;
 //Cambios
 short CambioI = 0;
 short CambioD = 0;
+//Varialbes para sumar y restar
+int MarcadorI = 0, MarcadorD = 0;
 void main(){
    output_a(0x3F);
    output_b(0xFF);
@@ -91,7 +94,7 @@ void main(){
 void mostrar(){
    for(i = 7;i>=0;i--){
       output_low(CLK);   //Envia la Señal de Reloj a 0 aceptar el Desplazamiento
-      delay_ms(50);
+      delay_ms(10);
       for(j = 0;j<=3;j++){
          if(i==7){
             if(setI == 0){
@@ -146,7 +149,7 @@ void mostrar(){
          }
       }
       output_high(CLK);   //Realiza el Desplazamiento al Ponerse en 1
-      delay_ms(50);
+      delay_ms(10);
    }
 }
 void inicializar(){
@@ -196,17 +199,15 @@ void desplazamiento(int dato, int posicion){
           output_high(RD4);
    }
 }
+
 void sumar(int lado){
    if(lado==0){
       if(CambioI == 1){
-         if(marcador[1]<10){;
-           marcador[1] += 1;
+         if(MarcadorI < tope1 || MarcadorI < tope2 || MarcadorI < tope3){
+            MarcadorI += 1;
+            marcador[0] = MarcadorI/10;
+            marcador[1] = MarcadorI%10;
          }
-         else{
-            marcador[1] = 0;
-            marcador[0] += 1;
-         }
-         mostrar();
       }
       else{
          CambioD = 0;
@@ -217,14 +218,11 @@ void sumar(int lado){
    }
    else{
       if(CambioD == 1){
-         if(marcador[3]<10){
-            marcador[3] += 1;
+         if(MarcadorD < tope1 || MarcadorD < tope2 || MarcadorI < tope3){
+            MarcadorD += 1;
+            marcador[2] = MarcadorD/10;
+            marcador[3] = MarcadorD%10;
          }
-         else{
-            marcador[3] = 0;
-            marcador[2] += 1;
-         }
-         mostrar();
       }
       else{
          CambioI = 0;
@@ -235,7 +233,27 @@ void sumar(int lado){
    }
    //Validar  con el Tope
    if(setI + setD <2){
-      if(10*marcador[0]+marcador[1] == tope1 || 10*marcador[2]+marcador[3] == tope1){
+      if(MarcadorI == tope1 || MarcadorD == tope1 || MarcadorI == tope2 || MarcadorD == tope2 ){
+         if(lado == 0){
+            setI += 1;
+            CambioD = 1;
+            CambioI = 0;
+            }
+         else{
+            setD += 1;
+            CambioD = 0;
+            CambioI = 1;
+         }
+         marcador[0] = 0;
+         marcador[1] = 0;
+         marcador[2] = 0;
+         marcador[3] = 0;
+         MarcadorI = 0;
+         MarcadorD = 0;
+      }
+   }
+   else{
+      if(MarcadorI == tope2 || MarcadorD == tope2 ){
          if(lado == 0)
             setI += 1;
          else
@@ -244,44 +262,30 @@ void sumar(int lado){
          marcador[1] = 0;
          marcador[2] = 0;
          marcador[3] = 0;
-         mostrar();
-      }
-   }
-   else{
-      if(10*marcador[0]+marcador[1] == tope2 || 10*marcador[2]+marcador[3] == tope2 ){
-         if(lado == 0)
-            setI += 1;
-         else
-            setD += 1;
-         marcador[0] = 0;
-         marcador[1] = 0;
-         marcador[2] = 0;
-         marcador[3] = 0;
-         mostrar();
-      }
-   }
-}
-void restar(int lado){
-   if(lado==0){
-      if(marcador[1]>=0){
-         marcador[1] -= 1;
-      }
-      else{
-         marcador[1] = 0;
-         marcador[0] -= 1;
-      }
-   }
-   else{
-      if(marcador[3]>=0){
-         marcador[3] -= 1;
-      }
-      else{
-         marcador[3] = 0;
-         marcador[2] -= 1;
+         MarcadorI = 0;
+         MarcadorD = 0;
       }
    }
    mostrar();
 }
-
+void restar(int lado){
+   if(lado==0){
+      if(MarcadorI>0){
+         MarcadorI -= 1;
+         marcador[0] = MarcadorI/10;
+         marcador[1] = MarcadorI%10;
+         mostrar();
+      }
+   }
+   else{
+      if(MarcadorD>0){
+         MarcadorD -= 1;
+         marcador[2] = MarcadorD/10;
+         marcador[3] = MarcadorD%10;
+         mostrar();
+      }
+   }
+   
+}
 
 
